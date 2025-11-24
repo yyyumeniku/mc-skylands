@@ -173,9 +173,13 @@ class Skylands(configFile: File) {
 
               // ensure chunk gets generated/loaded before teleporting
               try {
-                targetWorld.getChunkFromBlockCoords(safePos)
+                // try to ensure the chunk is loaded by invoking the chunkProvider via reflection
+                val field = classOf[net.minecraft.world.World].getDeclaredField("chunkProvider")
+                field.setAccessible(true)
+                val provider = field.get(targetWorld).asInstanceOf[net.minecraft.world.chunk.IChunkProvider]
+                if (provider != null) provider.provideChunk(safePos.getX >> 4, safePos.getZ >> 4)
               } catch {
-                case _: Throwable => // ignore chunk faults — still try to tele
+                case _: Throwable => // ignore any reflection or chunk generation issues
               }
 
               val teleporter = new org.lolhens.skylands.world.SimpleTeleporter(targetWorld, Some(safePos))
