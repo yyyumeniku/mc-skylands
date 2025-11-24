@@ -14,7 +14,7 @@ import net.minecraftforge.client.event.ModelRegistryEvent
 import net.minecraftforge.common.DimensionManager
 import net.minecraftforge.event.{LootTableLoadEvent, RegistryEvent}
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
-import net.minecraftforge.fml.common.gameevent.TickEvent
+import net.minecraftforge.fml.common.gameevent.{PlayerEvent, TickEvent}
 import net.minecraftforge.fml.common.registry.GameRegistry
 import org.lolhens.skylands.block.BlockCloud
 import org.lolhens.skylands.feature.{FallIntoOverworld, FeatherGliding}
@@ -153,5 +153,28 @@ class Skylands(configFile: File) {
     }
 
     FeatherGliding.update(player)
+  }
+
+  @SubscribeEvent
+  def onPlayerLogin(event: PlayerEvent.PlayerLoggedInEvent): Unit = {
+    val player = event.player
+
+    player match {
+      case player: EntityPlayerMP if !player.world.isRemote =>
+        try {
+          if (config.spawnOnJoin && player.dimension != config.dimensionId) {
+            val targetWorld = player.getServer.getWorld(config.dimensionId)
+            if (targetWorld != null) {
+              val spawnPos = targetWorld.getSpawnPoint
+              val teleporter = new org.lolhens.skylands.world.SimpleTeleporter(targetWorld, Some(spawnPos))
+              player.getServer.getPlayerList.transferPlayerToDimension(player, config.dimensionId, teleporter)
+            }
+          }
+        } catch {
+          case e: Exception => // swallow any issues, don't crash player login
+        }
+
+      case _ =>
+    }
   }
 }

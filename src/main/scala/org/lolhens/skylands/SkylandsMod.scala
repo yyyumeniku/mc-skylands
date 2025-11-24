@@ -9,7 +9,7 @@ import org.lolhens.skylands.proxy.CommonProxy
 /**
   * Created by pierr on 31.12.2016.
   */
-@Mod(modid = SkylandsMod.ModId, version = SkylandsMod.Version, modLanguage = "scala")
+@Mod(modid = SkylandsMod.ModId, version = SkylandsMod.Version, modLanguage = "scala", guiFactory = "org.lolhens.skylands.client.SkylandsGuiFactory")
 object SkylandsMod {
   final val ModId = "skylandsmod"
 
