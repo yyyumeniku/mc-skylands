@@ -166,7 +166,19 @@ class Skylands(configFile: File) {
             val targetWorld = player.getServer.getWorld(config.dimensionId)
             if (targetWorld != null) {
               val spawnPos = targetWorld.getSpawnPoint
-              val teleporter = new org.lolhens.skylands.world.SimpleTeleporter(targetWorld, Some(spawnPos))
+
+              // find the top solid (or liquid) block at the spawn's X/Z so we land on terrain, not float
+              val topPos = targetWorld.getTopSolidOrLiquidBlock(new BlockPos(spawnPos.getX, 0, spawnPos.getZ))
+              val safePos = if (topPos != null) topPos else spawnPos
+
+              // ensure chunk gets generated/loaded before teleporting
+              try {
+                targetWorld.getChunkFromBlockCoords(safePos)
+              } catch {
+                case _: Throwable => // ignore chunk faults — still try to tele
+              }
+
+              val teleporter = new org.lolhens.skylands.world.SimpleTeleporter(targetWorld, Some(safePos))
               player.getServer.getPlayerList.transferPlayerToDimension(player, config.dimensionId, teleporter)
             }
           }
