@@ -1,44 +1,149 @@
-buildscript {
-    repositories {
-        jcenter()
-        maven { url = "https://artifactory.lolhens.de/artifactory/maven-public/" }
-    }
-    dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
-    }
+// Replaced with CleanroomMC ForgeDevEnv template adapted for this project
+// Scala support added to compile the existing Scala sources
+import com.gtnewhorizons.retrofuturagradle.mcp.InjectTagsTask
+import org.jetbrains.changelog.Changelog
+import org.jetbrains.gradle.ext.Gradle
+
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'scala'
+    id 'maven-publish'
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.9'
+    id 'com.gtnewhorizons.retrofuturagradle' version '1.4.1'
+    id 'com.matthewprenger.cursegradle' version '1.4.0' apply false
+    id 'com.modrinth.minotaur' version '2.+' apply false
+    id 'org.jetbrains.changelog' version '2.2.1'
 }
 
-apply plugin: 'net.minecraftforge.gradle.forge'
-apply plugin: 'scala'
-apply plugin: 'idea'
-apply plugin: 'eclipse'
+apply from: 'gradle/scripts/helpers.gradle'
 
-sourceCompatibility = targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
-compileJava {
-    sourceCompatibility = targetCompatibility = '1.8'
+// --- Basic config, do not change unless you know what you're doing ---
+assertProperty 'mod_version'
+assertProperty 'root_package'
+assertProperty 'mod_id'
+assertProperty 'mod_name'
+
+setDefaultProperty 'use_modern_java_syntax', false, false
+setDefaultProperty 'generate_sources_jar', true, false
+setDefaultProperty 'generate_javadocs_jar', true, false
+setDefaultProperty 'mapping_channel', true, 'stable'
+setDefaultProperty 'mapping_version', true, '39'
+setDefaultProperty 'use_dependency_at_files', true, true
+
+version = propertyString('mod_version')
+group = propertyString('root_package')
+
+base {
+    archivesName.set(propertyString('mod_id'))
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(propertyBool('use_modern_java_syntax') ? 16 : 8))
+        vendor.set(JvmVendorSpec.AZUL)
+    }
+    if (propertyBool('generate_sources_jar')) withSourcesJar()
+    if (propertyBool('generate_javadocs_jar')) withJavadocJar()
+}
+
+configurations {
+    embed
+    implementation.extendsFrom(embed)
 }
 
 minecraft {
-    version = version_minecraft + "-" + version_forge
-    if (project.hasProperty("version_mappings")) mappings = version_mappings
-    runDir = "build/run"
+    mcVersion.set('1.12.2')
+    mcpMappingChannel.set(propertyString('mapping_channel'))
+    mcpMappingVersion.set(propertyString('mapping_version'))
+    useDependencyAccessTransformers.set(propertyBool('use_dependency_at_files'))
+    username.set(propertyString('minecraft_username'))
+
+    def args = ['-ea:' + group]
+    if (propertyBool('use_mixins')) {
+        args << '-Dmixin.hotSwap=true'
+        args << '-Dmixin.checks.interfaces=true'
+        args << '-Dmixin.debug.export=true'
+    }
+
+    extraRunJvmArguments.addAll(args)
+    extraRunJvmArguments.addAll(propertyStringList('extra_jvm_args'))
+    extraTweakClasses.addAll(propertyStringList('extra_tweak_classes'))
 }
+
+repositories {
+    maven { name 'CleanroomMC Maven'; url 'https://maven.cleanroommc.com' }
+}
+
+dependencies {
+    // Embed scala-library so the compiled mod contains necessary runtime classes
+    embed 'org.scala-lang:scala-library:2.11.12'
+
+    if (propertyBool('use_asset_mover')) {
+        implementation "com.cleanroommc:assetmover:${propertyString('asset_mover_version')}"
+    }
+}
+
+apply from: 'gradle/scripts/dependencies.gradle'
 
 processResources {
-    // this will ensure that this task is redone when the versions change.
-    inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
+    inputs.property 'mod_id', propertyString('mod_id')
+    inputs.property 'mod_name', propertyString('mod_name')
+    inputs.property 'mod_version', propertyString('mod_version')
+    inputs.property 'mod_description', propertyString('mod_description')
 
-    // replace stuff in mcmod.info, nothing else
-    from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-
-        // replace version and mcversion
-        expand 'version': project.version, 'mcversion': project.minecraft.version
-    }
-
-    // copy everything else, thats not the mcmod.info
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
+    def filterList = ['mcmod.info', 'pack.mcmeta']
+    filesMatching(filterList) { fcd ->
+        fcd.expand(
+            'mod_id': propertyString('mod_id'),
+            'mod_name': propertyString('mod_name'),
+            'mod_version': propertyString('mod_version'),
+            'mod_description': propertyString('mod_description')
+        )
     }
 }
+
+jar {
+    manifest {
+        def attribute_map = [:]
+        if (propertyBool('use_access_transformer')) attribute_map['FMLAT'] = propertyString('access_transformer_locations')
+        attributes(attribute_map)
+    }
+    from(provider{ configurations.embed.collect { it.isDirectory() ? it : zipTree(it) } })
+}
+
+// IDEA/project conveniences
+idea {
+    module { inheritOutputDirs = true }
+    project {
+        settings {
+            runConfigurations {
+                "1. Run Client"(Gradle) { taskNames = ["runClient"] }
+                "2. Run Server"(Gradle) { taskNames = ["runServer"] }
+                "3. Run Obfuscated Client"(Gradle) { taskNames = ["runObfClient"] }
+                "4. Run Obfuscated Server"(Gradle) { taskNames = ["runObfServer"] }
+            }
+        }
+    }
+}
+
+compileTestJava { sourceCompatibility = targetCompatibility = 8 }
+
+test {
+    useJUnitPlatform()
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) })
+}
+
+tasks.register('generateMixinJson') {
+    group 'cleanroom helpers'
+    onlyIf { propertyBool('use_mixins') && propertyBool('generate_mixins_json') }
+    doLast {
+        propertyStringList('mixin_configs').findAll { config -> !file("src/main/resources/mixins.${config}.json").exists() }.each { mixinConfig ->
+            def file = file("src/main/resources/mixins.${mixinConfig}.json")
+            file << '{\n\t"package": "",\n\t"required": true,\n\t"refmap": "' + propertyString('mixin_refmap') + '",\n\t"target": "@env(DEFAULT)",\n\t"minVersion": "0.8.5",\n\t"compatibilityLevel": "JAVA_8",\n\t"mixins": [],\n\t"server": [],\n\t"client": []\n}'
+        }
+    }
+}
+
+apply from: 'gradle/scripts/publishing.gradle'
+apply from: 'gradle/scripts/extra.gradle'

@@ -19,12 +19,12 @@ import org.lolhens.skylands.world.SimpleTeleporter
   * Created by pierr on 02.01.2017.
   */
 class BlockCloud extends Block(MaterialCloud) {
-  setUnlocalizedName("skylandsmod:cloud")
-  setCreativeTab(CreativeTabs.BUILDING_BLOCKS)
-  setHardness(1)
-  setResistance(2)
-  setSoundType(SoundType.SNOW)
-  setLightLevel(0.1f)
+  this.setUnlocalizedName("skylandsmod:cloud")
+  this.setCreativeTab(CreativeTabs.BUILDING_BLOCKS)
+  this.setHardness(1)
+  this.setResistance(2)
+  this.setSoundType(SoundType.SNOW)
+  this.setLightLevel(0.1f)
 
   override def createBlockState(): BlockStateContainer = new BlockStateContainer(this)
 
@@ -67,7 +67,7 @@ class BlockCloud extends Block(MaterialCloud) {
         x <- -radius to radius;
         z <- -radius to radius
       ) yield position.add(x, 0, z)
-    }.exists(world.getBlockState(_).getBlock == SkylandsMod.skylands.blockBeanStem)
+    }.exists(world.getBlockState(_).getBlock == SkylandsMod.skylands.blockCloud)
 
     entity match {
       case player: EntityPlayerMP if !player.world.isRemote =>

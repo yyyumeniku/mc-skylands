@@ -13,18 +13,7 @@ object FallIntoOverworld {
   def update(player: EntityPlayerMP): Unit = {
     val teleportTarget: Option[(Int, BlockPos)] =
       if (player.dimension == DimensionType.OVERWORLD.getId && player.posY >= 250) {
-        def isNearBeanStem(world: World, pos: BlockPos, radius: Int) = {
-          val positions = for (
-            x <- -radius to radius;
-            z <- -radius to radius
-          ) yield pos.add(x, 0, z)
-
-          positions.exists(position => world.getBlockState(position).getBlock == SkylandsMod.skylands.blockBeanStem)
-        }
-
-        /*if (isNearBeanStem(player.world, new BlockPos(player), 4))
-          Some((skylandsDimensionType.getId, new BlockPos(player.posX, 10, player.posZ)))
-        else*/
+        // Bean-based teleport condition removed — keep default behavior (no teleport from overworld to skylands at this point)
         None
       } else if (player.dimension == SkylandsMod.skylands.skylandsDimensionType.getId && player.posY <= 5)
         Some((DimensionType.OVERWORLD.getId, new BlockPos(player.posX, 245, player.posZ)))
