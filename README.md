@@ -9,8 +9,7 @@ This mod adds back the skylands as a seperate dimension. You start your game as 
 
 ![](https://raw.githubusercontent.com/LolHens/SkylandsMod/master/screenshots/2017-03-05_13.04.43.png)
 
-In order to get to the skylands dimension you have to find a magic bean in a dungeon chest.
-Once you plant this bean, a giant bean stalk shoud grow and you will be able to climb up into the skylands.
+This mod lets players travel to the Skylands dimension, a floating-islands dimension inspired by early Minecraft experiments.
 
 ![](https://raw.githubusercontent.com/LolHens/SkylandsMod/master/screenshots/2017-03-05_13.01.29.png)
 
