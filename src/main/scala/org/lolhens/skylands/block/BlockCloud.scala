@@ -18,8 +18,8 @@ import org.lolhens.skylands.world.SimpleTeleporter
 /**
   * Created by pierr on 02.01.2017.
   */
-class BlockCloud extends Block(MaterialCloud) {
-  this.setUnlocalizedName("skylandsmod:cloud")
+class BlockCloud extends net.minecraft.block.Block(MaterialCloud) {
+  this.setTranslationKey("skylandsmod:cloud")
   this.setCreativeTab(CreativeTabs.BUILDING_BLOCKS)
   this.setHardness(1)
   this.setResistance(2)
@@ -29,7 +29,7 @@ class BlockCloud extends Block(MaterialCloud) {
   override def createBlockState(): BlockStateContainer = new BlockStateContainer(this)
 
   @SideOnly(Side.CLIENT)
-  override def getBlockLayer: BlockRenderLayer = BlockRenderLayer.TRANSLUCENT
+  override def getRenderLayer: BlockRenderLayer = BlockRenderLayer.TRANSLUCENT
 
   override def isOpaqueCube(state: IBlockState): Boolean = false
 
@@ -51,30 +51,30 @@ class BlockCloud extends Block(MaterialCloud) {
 
   override def getCollisionBoundingBox(blockState: IBlockState, worldIn: IBlockAccess, pos: BlockPos): AxisAlignedBB = Block.NULL_AABB
 
-  override def onEntityCollidedWithBlock(world: World, position: BlockPos, state: IBlockState, entity: Entity): Unit = {
-    if (entity.motionY < 0) entity.motionY *= 0.5 //entity.motionY = Math.max(entity.motionY, -0.3)
-    entity.fallDistance = 0
+  override def onEntityCollision(worldIn: World, pos: BlockPos, state: IBlockState, entityIn: Entity): Unit = {
+    if (entityIn.motionY < 0) entityIn.motionY *= 0.5 //entity.motionY = Math.max(entity.motionY, -0.3)
+    entityIn.fallDistance = 0
 
-    val isFlying = entity match {
+    val isFlying = entityIn match {
       case player: EntityPlayer => player.capabilities.isFlying
       case _ => false
     }
 
-    if (!isFlying && entity.motionY <= 0.1) entity.onGround = true
+    if (!isFlying && entityIn.motionY <= 0.1) entityIn.onGround = true
 
     def nearCloud(position: BlockPos, radius: Int): Boolean = {
       for (
         x <- -radius to radius;
         z <- -radius to radius
       ) yield position.add(x, 0, z)
-    }.exists(world.getBlockState(_).getBlock == SkylandsMod.skylands.blockCloud)
+    }.exists(worldIn.getBlockState(_).getBlock == SkylandsMod.skylands.blockCloud)
 
-    entity match {
+    entityIn match {
       case player: EntityPlayerMP if !player.world.isRemote =>
         val playerPos = new BlockPos(player)
 
         val teleportTarget: Option[(DimensionType, BlockPos)] =
-          if (player.dimension == DimensionType.OVERWORLD.getId && position.getY >= 250 && nearCloud(playerPos, 20))
+          if (player.dimension == DimensionType.OVERWORLD.getId && pos.getY >= 250 && nearCloud(playerPos, 20))
             Some(SkylandsMod.skylands.skylandsDimensionType -> playerPos.add(0, SkylandsMod.skylands.skylandsOverlap - 255, 0))
           else
             None

@@ -91,14 +91,19 @@ processResources {
     inputs.property 'mod_name', propertyString('mod_name')
     inputs.property 'mod_version', propertyString('mod_version')
     inputs.property 'mod_description', propertyString('mod_description')
+    // expose mcversion and a backwards-compatible 'version' for older templates
+    inputs.property 'mcversion', propertyString('mcversion')
+    inputs.property 'version', propertyString('mod_version')
 
     def filterList = ['mcmod.info', 'pack.mcmeta']
     filesMatching(filterList) { fcd ->
-        fcd.expand(
+            fcd.expand(
             'mod_id': propertyString('mod_id'),
             'mod_name': propertyString('mod_name'),
-            'mod_version': propertyString('mod_version'),
-            'mod_description': propertyString('mod_description')
+                'mod_version': propertyString('mod_version'),
+                'mod_description': propertyString('mod_description'),
+                'mcversion': propertyString('mcversion'),
+                'version': propertyString('mod_version')
         )
     }
 }
